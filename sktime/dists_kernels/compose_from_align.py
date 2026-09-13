@@ -31,7 +31,6 @@ class DistFromAligner(BasePairwiseTransformerPanel):
 
     _tags = {
         "authors": ["fkiraly"],
-        "symmetric": True,  # all the distances are symmetric
         "capability:unequal_length": True,  # aligners can usually handle unequal length
         # CI and test flags
         # -----------------
@@ -68,14 +67,8 @@ class DistFromAligner(BasePairwiseTransformerPanel):
         distmat: np.array of shape [n, m]
             (i,j)-th entry contains distance/kernel between X.iloc[i] and X2.iloc[j]
         """
-        # find out whether we know that the resulting matrix is symmetric
-        #   since aligner distances are always symmetric,
-        #   we know it's the case for sure if X equals X2
         if X2 is None:
             X2 = X
-            symm = True
-        else:
-            symm = False
 
         n = len(X)
         m = len(X2)
@@ -87,12 +80,12 @@ class DistFromAligner(BasePairwiseTransformerPanel):
         else:
             return distmat
 
+        # Aligner distances are not necessarily symmetric. In particular,
+        # AlignerLuckyDtw can produce different values when its inputs are swapped.
+        # Compute every ordered pair instead of mirroring one triangle.
         for i in range(n):
             for j in range(m):
-                if symm and j < i:
-                    distmat[i, j] = distmat[j, i]
-                else:
-                    distmat[i, j] = aligner.fit([X[i], X2[j]]).get_distance()
+                distmat[i, j] = aligner.fit([X[i], X2[j]]).get_distance()
 
         return distmat
 
